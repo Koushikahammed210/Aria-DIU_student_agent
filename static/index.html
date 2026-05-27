@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aria v1.4 — by Koushik Ahammed</title>
+<style>
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;
+  --accent:#6c63ff;--accent2:#a78bfa;--text:#e2e8f0;--muted:#8892b0;
+  --user:#2d3561;--bot:#1e2235;
+  --success:#34d399;--danger:#f87171;--warn:#fbbf24;
+  --cv:#0d7377;--cv2:#14a085;--cvd:#083335;
+  --prs:#6d28d9;--prs2:#8b5cf6;--prsd:#3b0764;
+  --tutor:#34d399;--coder:#60a5fa;--creative:#f472b6;--analyst:#fbbf24;
+  --r:14px;--f:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--f);height:100vh;display:flex;flex-direction:row}
+
+/* Sidebar */
+.sidebar{width:0;min-width:0;background:var(--surface);border-right:1px solid var(--border);overflow:hidden;transition:width .3s ease,min-width .3s ease;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar.open{width:260px;min-width:260px}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-header h3{font-size:.85rem;color:var(--accent2);font-weight:700}
+.sidebar-list{flex:1;overflow-y:auto;padding:6px}
+.sidebar-list::-webkit-scrollbar{width:3px}
+.sidebar-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.sidebar-item{padding:10px 12px;border-radius:8px;cursor:pointer;transition:all .18s;margin-bottom:4px;border:1px solid transparent}
+.sidebar-item:hover{background:var(--surface2);border-color:var(--border)}
+.sidebar-item.active{background:rgba(108,99,255,.12);border-color:rgba(108,99,255,.3)}
+.sidebar-item .si-title{font-size:.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.sidebar-item .si-time{font-size:.64rem;color:var(--muted)}
+.sidebar-item .si-del{float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.72rem;padding:0 2px;opacity:0;transition:opacity .18s}
+.sidebar-item:hover .si-del{opacity:1}
+.sidebar-item .si-del:hover{color:var(--danger)}
+.sidebar-footer{padding:8px 12px;border-top:1px solid var(--border);flex-shrink:0}
+.sidebar-footer button{width:100%;padding:7px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:7px;font-size:.74rem;cursor:pointer;transition:all .18s}
+.sidebar-footer button:hover{border-color:var(--danger);color:var(--danger)}
+.main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:9px;font-size:1.1rem;font-weight:700;color:var(--accent2)}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all .3s}
+.logo-sub{font-size:.64rem;color:var(--muted);font-weight:400}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.header-right{display:flex;align-items:center;gap:10px}
+
+/* Persona badge in header */
+.persona-badge{display:flex;align-items:center;gap:5px;font-size:.74rem;padding:3px 10px;border-radius:20px;font-weight:600;transition:all .25s;cursor:pointer}
+.persona-badge.default{background:rgba(108,99,255,.15);color:var(--accent2);border:1px solid rgba(108,99,255,.3)}
+.persona-badge.tutor{background:rgba(52,211,153,.15);color:var(--tutor);border:1px solid rgba(52,211,153,.3)}
+.persona-badge.coder{background:rgba(96,165,250,.15);color:var(--coder);border:1px solid rgba(96,165,250,.3)}
+.persona-badge.creative{background:rgba(244,114,182,.15);color:var(--creative);border:1px solid rgba(244,114,182,.3)}
+.persona-badge.analyst{background:rgba(251,191,36,.15);color:var(--analyst);border:1px solid rgba(251,191,36,.3)}
+
+#chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:11px;scroll-behavior:smooth}
+#chat::-webkit-scrollbar{width:4px}
+#chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.msg{display:flex;gap:8px;max-width:820px;animation:fu .2s ease}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg.bot,.msg.cv-bot,.msg.prs-bot,.msg.tutor-bot,.msg.coder-bot,.msg.quiz-bot{align-self:flex-start}
+
+.av{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0;margin-top:2px}
+.msg.user .av{background:var(--user);color:var(--accent2)}
+.msg.bot  .av{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.msg.cv-bot .av{background:linear-gradient(135deg,var(--cvd),var(--cv2));color:#fff}
+.msg.prs-bot .av{background:linear-gradient(135deg,var(--prsd),var(--prs2));color:#fff}
+.msg.tutor-bot .av{background:linear-gradient(135deg,#065f46,#34d399);color:#fff}
+.msg.coder-bot .av{background:linear-gradient(135deg,#1e3a5f,#60a5fa);color:#fff}
+
+.bbl{padding:9px 13px;border-radius:var(--r);font-size:.87rem;line-height:1.65;max-width:680px;white-space:pre-wrap;word-break:break-word}
+.msg.user  .bbl{background:var(--user);border-bottom-right-radius:4px}
+.msg.bot   .bbl{background:var(--bot);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg.cv-bot .bbl{background:#0a2a2a;border:1px solid var(--cv);border-bottom-left-radius:4px}
+.msg.prs-bot .bbl{background:#1a0a3a;border:1px solid var(--prs);border-bottom-left-radius:4px}
+.msg.tutor-bot .bbl{background:#0a2a1a;border:1px solid rgba(52,211,153,.3);border-bottom-left-radius:4px}
+.msg.coder-bot .bbl{background:#0a1a2a;border:1px solid rgba(96,165,250,.3);border-bottom-left-radius:4px}
+.bbl b{color:#c4b5fd;font-weight:700}
+.bbl i{color:#94a3b8;font-style:italic}
+.bbl code{background:#2d3561;padding:1px 5px;border-radius:4px;font-size:.82rem;font-family:monospace}
+.msg.cv-bot .bbl b{color:#5eead4}
+.msg.prs-bot .bbl b{color:#c4b5fd}
+.msg.tutor-bot .bbl b{color:#6ee7b7}
+.msg.coder-bot .bbl b{color:#93c5fd}
+
+/* File attachment indicator in bubble */
+.file-attach{display:flex;align-items:center;gap:6px;padding:5px 9px;background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.25);border-radius:8px;margin-bottom:6px;font-size:.78rem;color:var(--accent2)}
+.file-attach .file-icon{font-size:1rem}
+
+/* Image preview in bubble */
+.bbl img.thumb{max-width:220px;max-height:160px;border-radius:8px;margin-top:6px;display:block;cursor:pointer}
+.bbl img.thumb:hover{opacity:.85}
+
+.meta{font-size:.66rem;color:var(--muted);margin-top:3px;padding:0 3px}
+.msg.user .meta{text-align:right}
+
+.badge{display:inline-block;font-size:.61rem;padding:2px 7px;border-radius:6px;margin-bottom:4px;font-weight:700;letter-spacing:.3px}
+.badge.planner{background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff}
+.badge.cover{background:linear-gradient(135deg,var(--cvd),var(--cv2));color:#fff}
+.badge.img{background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff}
+.badge.presentation{background:linear-gradient(135deg,var(--prsd),var(--prs2));color:#fff}
+.badge.tutor-badge{background:linear-gradient(135deg,#065f46,#34d399);color:#fff}
+.badge.coder-badge{background:linear-gradient(135deg,#1e3a5f,#60a5fa);color:#fff}
+.badge.file-badge{background:linear-gradient(135deg,#92400e,#f59e0b);color:#fff}
+
+.typing .bbl{display:flex;gap:5px;align-items:center;padding:11px 15px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:b 1.2s infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+.cv-bot .dot{background:var(--cv2)}
+.prs-bot .dot{background:var(--prs2)}
+@keyframes b{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+
+.dl-card{margin-top:8px;padding:9px 13px;background:linear-gradient(135deg,#1a2f4f,#162640);border:1px solid #2a4a70;border-radius:10px;display:flex;align-items:center;gap:9px;text-decoration:none;transition:all .2s}
+.dl-card:hover{border-color:var(--accent2);transform:translateY(-1px)}
+.dl-ico{font-size:1.35rem}
+.dl-info{flex:1}
+.dl-title{font-size:.82rem;font-weight:600;color:#90cdf4}
+.dl-sub{font-size:.68rem;color:var(--muted);margin-top:1px}
+.dl-btn{background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:.74rem;cursor:pointer;font-weight:600}
+
+/* Mode bars */
+.cv-bar,.prs-bar,.tutor-bar{display:none;border-bottom:1px solid;padding:6px 16px;font-size:.76rem;flex-shrink:0;align-items:center;justify-content:space-between}
+.cv-bar{background:linear-gradient(135deg,#062020,#0a3535);border-color:var(--cv);color:var(--cv2)}
+.prs-bar{background:linear-gradient(135deg,#1a0a3a,#2d1a5a);border-color:var(--prs);color:var(--prs2)}
+.tutor-bar{background:linear-gradient(135deg,#062020,#0a3520);border-color:var(--tutor);color:var(--tutor)}
+.cv-bar.show,.prs-bar.show,.tutor-bar.show{display:flex}
+.cv-bar strong,.prs-bar strong{color:#5eead4}
+.tutor-bar strong{color:#6ee7b7}
+.cv-bar button,.prs-bar button,.tutor-bar button{background:none;border:1px solid currentColor;color:inherit;padding:3px 9px;border-radius:5px;cursor:pointer;font-size:.7rem}
+
+/* Image/file upload buttons */
+.upload-label{display:flex;align-items:center;justify-content:center;width:37px;height:37px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .18s;flex-shrink:0;font-size:.9rem}
+.upload-label:hover{border-color:var(--warn);color:var(--warn)}
+.upload-label.has-files{border-color:var(--warn);color:var(--warn);background:#2a1f05}
+.upload-label.file-label:hover{border-color:var(--accent2);color:var(--accent2)}
+.upload-label.file-label.has-files{border-color:var(--accent2);color:var(--accent2);background:rgba(108,99,255,.1)}
+#imgUpload,#fileUpload{display:none}
+
+/* File preview strip above input */
+.preview-strip{display:none;padding:6px 0 0;gap:6px;align-items:center;flex-wrap:wrap}
+.preview-strip.show{display:flex}
+.prev-item{position:relative}
+.prev-item img{width:50px;height:50px;object-fit:cover;border-radius:7px;border:1px solid var(--border)}
+.prev-item .file-chip{display:flex;align-items:center;gap:4px;padding:4px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-size:.72rem;color:var(--text)}
+.prev-item .file-chip .chip-icon{font-size:.9rem}
+.prev-item button{position:absolute;top:-4px;right:-4px;background:var(--danger);border:none;color:#fff;width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:.6rem;display:flex;align-items:center;justify-content:center}
+
+.inp-area{flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 15px}
+.ctrl-row{display:flex;gap:6px;margin-bottom:7px;flex-wrap:wrap;align-items:center}
+.sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 9px;border-radius:6px;font-size:.76rem;cursor:pointer;outline:none}
+.tbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 11px;border-radius:6px;font-size:.76rem;cursor:pointer;transition:all .18s;white-space:nowrap}
+.tbtn:hover{border-color:var(--accent2);color:var(--text)}
+.tbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.lang-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.74rem;cursor:pointer;outline:none}
+.cvbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 11px;border-radius:6px;font-size:.76rem;cursor:pointer;transition:all .18s;white-space:nowrap}
+.cvbtn:hover{border-color:var(--cv2);color:var(--cv2)}
+.cvbtn.on{background:linear-gradient(135deg,var(--cv),var(--cv2));color:#fff;border-color:var(--cv2)}
+.prsbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 11px;border-radius:6px;font-size:.76rem;cursor:pointer;transition:all .18s;white-space:nowrap}
+.prsbtn:hover{border-color:var(--prs2);color:var(--prs2)}
+.prsbtn.on{background:linear-gradient(135deg,var(--prs),var(--prs2));color:#fff;border-color:var(--prs2)}
+
+/* Persona selector dropdown */
+.persona-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.76rem;cursor:pointer;outline:none;min-width:110px}
+.persona-sel option{background:var(--surface2);color:var(--text)}
+
+.inp-row{display:flex;gap:7px;align-items:flex-end}
+#inp{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:.87rem;resize:none;outline:none;line-height:1.5;max-height:120px;overflow-y:auto;font-family:var(--f);transition:border-color .2s}
+#inp:focus{border-color:var(--accent)}
+#inp.cv:focus{border-color:var(--cv2)}
+#inp.prs:focus{border-color:var(--prs2)}
+#inp.tutor:focus{border-color:var(--tutor)}
+#inp::placeholder{color:var(--muted)}
+.ibtn{width:37px;height:37px;border-radius:9px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:all .18s;flex-shrink:0}
+#snd{background:var(--accent);color:#fff}
+#snd:hover{background:var(--accent2);transform:scale(1.04)}
+#snd:disabled{opacity:.4;cursor:not-allowed;transform:none}
+#snd.cv{background:linear-gradient(135deg,var(--cv),var(--cv2))}
+#snd.prs{background:linear-gradient(135deg,var(--prs),var(--prs2))}
+#mic{background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+#mic.on{background:var(--danger);border-color:var(--danger);color:#fff;animation:mp 1s infinite}
+@keyframes mp{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)}50%{box-shadow:0 0 0 6px rgba(248,113,113,0)}}
+.hint{text-align:center;font-size:.64rem;color:var(--muted);margin-top:5px}
+
+/* Full image modal */
+#imgModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;cursor:zoom-out}
+#imgModal.show{display:flex}
+#imgModal img{max-width:90vw;max-height:90vh;border-radius:10px;box-shadow:0 0 40px rgba(0,0,0,.5)}
+
+/* Presentation modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:1rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;margin-left:auto}
+.modal-field{margin-bottom:12px}
+.modal-field label{display:block;font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px}
+.modal-field input,.modal-field textarea{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-size:.85rem;outline:none;width:100%;font-family:inherit}
+.modal-field textarea{resize:vertical;min-height:80px}
+.modal-btn{width:100%;padding:10px;background:linear-gradient(135deg,var(--prs),var(--prs2));color:#fff;border:none;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed}
+
+#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(18px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:16px;font-size:.77rem;opacity:0;pointer-events:none;transition:all .28s;z-index:500}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--success);color:var(--success)}
+#toast.warn{border-color:var(--warn);color:var(--warn)}
+
+/* Responsive */
+@media(max-width:600px){
+  .ctrl-row{gap:4px}
+  .tbtn,.cvbtn,.prsbtn{padding:3px 8px;font-size:.7rem}
+  .sel,.persona-sel{padding:3px 6px;font-size:.7rem}
+  .sidebar.open{width:220px;min-width:220px;position:fixed;z-index:700;height:100vh}
+}
+
+/* Quiz mode */
+.quiz-bar{display:none;border-bottom:1px solid;padding:6px 16px;font-size:.76rem;flex-shrink:0;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#1a0a2a,#2d1a4a);border-color:#8b5cf6;color:#c4b5fd}
+.quiz-bar.show{display:flex}
+.quiz-bar strong{color:#c4b5fd}
+.quiz-bar button{background:none;border:1px solid currentColor;color:inherit;padding:3px 9px;border-radius:5px;cursor:pointer;font-size:.7rem}
+.quizbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 11px;border-radius:6px;font-size:.76rem;cursor:pointer;transition:all .18s;white-space:nowrap}
+.quizbtn:hover{border-color:#8b5cf6;color:#c4b5fd}
+.quizbtn.on{background:linear-gradient(135deg,#6d28d9,#8b5cf6);color:#fff;border-color:#8b5cf6}
+.badge.quiz-badge{background:linear-gradient(135deg,#4c1d95,#8b5cf6);color:#fff}
+.msg.quiz-bot .av{background:linear-gradient(135deg,#4c1d95,#8b5cf6);color:#fff}
+.msg.quiz-bot .bbl{background:#1a0a3a;border:1px solid #6d28d9;border-bottom-left-radius:4px}
+.msg.quiz-bot .bbl b{color:#c4b5fd}
+.quiz-bot .dot{background:#8b5cf6}
+.quiz-card{background:var(--surface);border:1px solid #6d28d9;border-radius:14px;padding:18px;margin:6px 0;max-width:520px}
+.quiz-progress{height:6px;background:var(--surface2);border-radius:3px;margin-bottom:14px;overflow:hidden}
+.quiz-progress-fill{height:100%;background:linear-gradient(90deg,#6d28d9,#8b5cf6);border-radius:3px;transition:width .3s}
+.quiz-q-num{font-size:.7rem;color:var(--muted);margin-bottom:4px}
+.quiz-q-text{font-size:.92rem;color:var(--text);margin-bottom:14px;line-height:1.55}
+.quiz-opts{display:flex;flex-direction:column;gap:8px}
+.quiz-opt{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .18s;font-size:.85rem;color:var(--text)}
+.quiz-opt:hover{border-color:#8b5cf6;background:#1a1030}
+.quiz-opt.selected{border-color:#8b5cf6;background:rgba(139,92,246,.15);color:#c4b5fd}
+.quiz-opt.correct{border-color:var(--success);background:rgba(52,211,153,.12);color:var(--success)}
+.quiz-opt.wrong{border-color:var(--danger);background:rgba(248,113,113,.12);color:var(--danger)}
+.quiz-opt-letter{width:26px;height:26px;border-radius:50%;background:rgba(108,99,255,.15);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.76rem;color:var(--accent2);flex-shrink:0}
+.quiz-opt.correct .quiz-opt-letter{background:rgba(52,211,153,.25);color:var(--success)}
+.quiz-opt.wrong .quiz-opt-letter{background:rgba(248,113,113,.25);color:var(--danger)}
+.quiz-expl{margin-top:12px;padding:10px 14px;background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.15);border-radius:9px;font-size:.8rem;color:var(--muted);line-height:1.5}
+.quiz-expl b{color:var(--accent2)}
+.quiz-next-btn{margin-top:12px;padding:8px 20px;background:linear-gradient(135deg,#6d28d9,#8b5cf6);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .18s}
+.quiz-next-btn:hover{transform:translateY(-1px);opacity:.9}
+.quiz-result{text-align:center;padding:16px}
+.quiz-score-big{font-size:2.5rem;font-weight:800;color:#c4b5fd;margin:8px 0}
+.quiz-stars{font-size:1.3rem;margin:6px 0}
+.quiz-detail{font-size:.8rem;color:var(--muted);margin-top:8px}
+.quiz-review-item{text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-top:8px;font-size:.8rem}
+.quiz-review-item .qri-q{color:var(--text);margin-bottom:4px}
+.quiz-review-item .qri-ans{color:var(--danger);font-size:.74rem}
+.quiz-review-item .qri-correct{color:var(--success);font-size:.74rem}
+.quiz-actions{display:flex;gap:8px;justify-content:center;margin-top:14px}
+.quiz-actions button{padding:8px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .18s;border:none}
+.quiz-actions .btn-primary{background:linear-gradient(135deg,#6d28d9,#8b5cf6);color:#fff}
+.quiz-actions .btn-secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+</style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h3>💬 History</h3>
+    <button onclick="toggleSidebar()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>
+  </div>
+  <div class="sidebar-list" id="sidebarList"></div>
+  <div class="sidebar-footer">
+    <button onclick="newConvFromSidebar()" style="margin-bottom:6px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none">➕ New Chat</button>
+    <button onclick="clearAllHistory()">🗑 Clear All History</button>
+  </div>
+</div>
+
+<div class="main-wrap">
+<header>
+  <div class="logo">
+    <button id="sidebarToggle" onclick="toggleSidebar()" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'" style="background:none;border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0" title="Chat History">☰</button>
+    <div class="logo-icon" id="logoIcon">✦</div>
+    <div>Aria <span class="logo-sub">by Koushik Ahammed</span></div>
+  </div>
+  <div class="header-right">
+    <div class="persona-badge default" id="personaBadge" onclick="document.getElementById('personaSel').focus()">
+      <span id="personaBadgeIcon">✦</span>
+      <span id="personaBadgeName">Aria</span>
+    </div>
+    <div class="status-dot" title="Online"></div>
+  </div>
+</header>
+
+<div class="tutor-bar" id="tutorBar">
+  🎓 <strong>Tutor Mode</strong> — Share a topic, PDF, PPTX, or YouTube link to learn!
+  <button onclick="cancelTutorMode()">✕ Exit</button>
+</div>
+
+<div class="cv-bar" id="cvBar">
+  📄 <strong>Cover Page Mode</strong> — Answer each question to generate your DIU cover page
+  <button onclick="cancelCover()">✕ Cancel</button>
+</div>
+
+<div class="prs-bar" id="prsBar">
+  📊 <strong>Presentation Mode</strong> — Generating your PPTX...
+  <button onclick="cancelPresentation()">✕ Cancel</button>
+</div>
+
+<div class="quiz-bar" id="quizBar">
+  🧠 <strong>Quiz Mode</strong> — Answer questions and test your knowledge!
+  <button onclick="cancelQuiz()">✕ Cancel</button>
+</div>
+
+<div id="chat">
+  <div class="msg bot">
+    <div class="av">✦</div>
+    <div>
+      <div class="bbl">Hello! I'm <b>Aria v1.4</b>, built by <b>Koushik Ahammed</b> 👋
+
+I can <b>chat</b> in multiple languages, <b>analyze images</b> (via Gemini + LLaVA), search the web, check weather, run code, and generate <b>DIU cover pages</b>.
+
+🎓 Select a <b>Persona</b> (Tutor, Coder, Creative, Analyst) for specialized help
+📊 Click <b>Present</b> to generate a PPTX from any topic
+🧠 Click <b>Quiz</b> to test your knowledge on any topic or file — <b>GUARANTEED to work!</b>
+📄 Click <b>Cover Page</b> to generate cover pages
+📎 Use the <b>+</b> button to attach files (PDF, TXT, PPTX, DOCX)
+🎤 Click the <b>mic</b> button for voice input
+🖼️ Upload an image using the 📷 button to analyze it (works with LLaVA!)
+☰ Click the <b>menu</b> button to view chat history</div>
+      <div class="meta">just now</div>
+    </div>
+  </div>
+</div>
+
+<div class="inp-area">
+  <div class="ctrl-row">
+    <select class="persona-sel" id="personaSel" onchange="setPersona(this.value)" title="Select persona">
+      <option value="default">✦ Aria</option>
+      <option value="tutor">🎓 Tutor</option>
+      <option value="coder">💻 Coder</option>
+      <option value="creative">🎨 Creative</option>
+      <option value="analyst">📊 Analyst</option>
+    </select>
+    <select class="sel" id="modeSel" onchange="setMode(this.value)">
+      <option value="auto">⚡ Auto</option>
+      <option value="ollama">🦙 Ollama</option>
+      <option value="nim">✨ NIM</option>
+    </select>
+    <button class="tbtn" id="planBtn" onclick="togglePlanner()">🧠 Planner</button>
+    <button class="cvbtn" id="cvBtn" onclick="startCoverMode()">📄 Cover Page</button>
+    <button class="prsbtn" id="prsBtn" onclick="openPresentationModal()">📊 Present</button>
+    <button class="quizbtn" id="quizBtn" onclick="openQuizModal()">🧠 Quiz</button>
+    <button class="tbtn" id="ttsBtn" onclick="toggleTTS()">🔊 Voice</button>
+    <select class="lang-sel" id="langSel" title="Response language" onchange="setLang(this.value)">
+      <option value="auto">🌐 Auto</option>
+      <option value="English">🇬🇧 English</option>
+      <option value="Bengali">🇧🇩 বাংলা</option>
+      <option value="Hindi">🇮🇳 Hindi</option>
+      <option value="Arabic">🇸🇦 Arabic</option>
+      <option value="French">🇫🇷 French</option>
+      <option value="Spanish">🇪🇸 Spanish</option>
+      <option value="Chinese">🇨🇳 Chinese</option>
+      <option value="Japanese">🇯🇵 Japanese</option>
+    </select>
+    <button class="tbtn" onclick="clearMem()">🗑 Clear</button>
+  </div>
+  <!-- File preview strip -->
+  <div class="preview-strip" id="imgPreview"></div>
+  <div class="preview-strip" id="filePreview"></div>
+  <div class="inp-row">
+    <label class="upload-label" id="imgLabel" title="Attach image">
+      📷
+      <input type="file" id="imgUpload" accept="image/*" multiple onchange="handleImgSelect(this)"/>
+    </label>
+    <label class="upload-label file-label" id="fileLabel" title="Attach file (PDF, TXT, PPTX, DOCX)">
+      ＋
+      <input type="file" id="fileUpload" accept=".pdf,.txt,.pptx,.docx,.csv,.json,.py,.js,.html,.css,.java,.cpp,.c,.md,.xlsx" multiple onchange="handleFileSelect(this)"/>
+    </label>
+    <textarea id="inp" rows="1" placeholder="Message Aria..."></textarea>
+    <button class="ibtn" id="mic" onclick="toggleMic()" title="Voice input">🎤</button>
+    <button class="ibtn" id="snd" onclick="send()">➤</button>
+  </div>
+  <div class="hint" id="hint">Personas · Presentations · Quiz · Cover Pages · File Upload · Voice I/O · Image Analysis</div>
+</div>
+
+<!-- Full-size image modal -->
+<div id="imgModal" onclick="this.classList.remove('show')">
+  <img id="imgModalImg" src="" alt=""/>
+</div>
+
+<!-- Presentation modal -->
+<div class="modal-overlay" id="presModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      📊 Generate Presentation
+      <button class="modal-close" onclick="closePresentationModal()">✕</button>
+    </div>
+    <div class="modal-field">
+      <label>Topic *</label>
+      <input type="text" id="presTopic" placeholder="e.g. Machine Learning Basics, Climate Change, Python for Beginners"/>
+    </div>
+    <div class="modal-field">
+      <label>Additional Details (optional)</label>
+      <textarea id="presDetails" placeholder="Any specific areas to focus on, target audience, etc."></textarea>
+    </div>
+    <button class="modal-btn" id="presGenBtn" onclick="generatePresentation()">📊 Generate PPTX</button>
+    <div id="presMsg" style="margin-top:8px;font-size:.78rem;color:var(--muted);text-align:center"></div>
+  </div>
+</div>
+
+<!-- Quiz modal -->
+<div class="modal-overlay" id="quizModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      🧠 Quiz Mode
+      <button class="modal-close" onclick="closeQuizModal()">✕</button>
+    </div>
+    <div class="modal-field">
+      <label>Source</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="quiz-opt selected" id="quizSrcTopic" onclick="setQuizSource('topic')" style="flex:1;justify-content:center;padding:8px">📝 Topic</button>
+        <button class="quiz-opt" id="quizSrcFile" onclick="setQuizSource('file')" style="flex:1;justify-content:center;padding:8px">📎 Upload File</button>
+      </div>
+    </div>
+    <div class="modal-field" id="quizTopicField">
+      <label>Topic *</label>
+      <input type="text" id="quizTopic" placeholder="e.g. Machine Learning, Data Structures, World War II"/>
+    </div>
+    <div class="modal-field" id="quizFileField" style="display:none">
+      <label>Upload File (PDF, TXT, DOCX, PPTX)</label>
+      <input type="file" id="quizFileInput" accept=".pdf,.txt,.docx,.pptx,.csv,.json,.md" style="width:100%;color:var(--text);font-size:.82rem"/>
+      <div id="quizFileStatus" style="font-size:.72rem;color:var(--muted);margin-top:4px"></div>
+    </div>
+    <div class="modal-field">
+      <label>Difficulty</label>
+      <div style="display:flex;gap:6px">
+        <button class="quiz-opt" data-diff="easy" onclick="setQuizDiff(this)" style="flex:1;justify-content:center;padding:8px">Easy</button>
+        <button class="quiz-opt selected" data-diff="medium" onclick="setQuizDiff(this)" style="flex:1;justify-content:center;padding:8px">Medium</button>
+        <button class="quiz-opt" data-diff="hard" onclick="setQuizDiff(this)" style="flex:1;justify-content:center;padding:8px">Hard</button>
+        <button class="quiz-opt" data-diff="mixed" onclick="setQuizDiff(this)" style="flex:1;justify-content:center;padding:8px">Mixed</button>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Number of Questions: <span id="quizCountLabel">10</span></label>
+      <input type="range" id="quizCountSlider" min="1" max="30" value="10" oninput="document.getElementById('quizCountLabel').textContent=this.value" style="width:100%;accent-color:#8b5cf6"/>
+    </div>
+    <button class="modal-btn" id="quizStartBtn" onclick="startQuiz()" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6)">🧠 Start Quiz</button>
+    <div id="quizMsg" style="margin-top:8px;font-size:.78rem;color:var(--muted);text-align:center"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let usePlanner=false, useTTS=false, inCover=false, inPresentation=false, inQuiz=false;
+let awaitingChoice=false;
+let recog=null, listening=false, currentLang='auto';
+let currentPersona='default';
+const synth=window.speechSynthesis;
+const chatEl=document.getElementById('chat');
+const inp=document.getElementById('inp');
+const snd=document.getElementById('snd');
+const mic=document.getElementById('mic');
+let pendingImages=[]; // [{base64, mime, thumb}]
+let pendingFiles=[];  // [{name, type, size, extractedText}]
+
+// ── Textarea resize ──────────────────────────────────────────────────────────
+inp.addEventListener('input',()=>{ inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,120)+'px'; });
+inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
+
+// ── Persona ──────────────────────────────────────────────────────────────────
+async function setPersona(persona){
+  currentPersona=persona;
+  try{
+    const res=await fetch('/persona',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({persona})});
+    const data=await res.json();
+    if(data.status==='success'){
+      const badge=document.getElementById('personaBadge');
+      badge.className='persona-badge '+persona;
+      document.getElementById('personaBadgeIcon').textContent=data.icon||'✦';
+      document.getElementById('personaBadgeName').textContent=data.name||'Aria';
+      document.getElementById('logoIcon').textContent=data.icon||'✦';
+      toast(`${data.icon} ${data.name} mode`);
+      // Show tutor bar when switching to tutor
+      if(persona==='tutor') activateTutorBar();
+      else document.getElementById('tutorBar').classList.remove('show');
+    }
+  }catch(e){}
+}
+
+// ── Image selection ──────────────────────────────────────────────────────────
+function handleImgSelect(input){
+  const files=Array.from(input.files);
+  if(!files.length)return;
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const b64=e.target.result.split(',')[1];
+      const mime=file.type||'image/jpeg';
+      pendingImages.push({base64:b64,mime,thumb:e.target.result,name:file.name});
+      renderImgPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+
+function renderImgPreview(){
+  const strip=document.getElementById('imgPreview');
+  strip.innerHTML='';
+  if(!pendingImages.length){strip.classList.remove('show');document.getElementById('imgLabel').classList.remove('has-files');return;}
+  strip.classList.add('show');document.getElementById('imgLabel').classList.add('has-files');
+  pendingImages.forEach((img,i)=>{
+    const item=document.createElement('div');item.className='prev-item';
+    item.innerHTML=`<img src="${img.thumb}" title="${img.name}"/><button onclick="removeImg(${i})">✕</button>`;
+    strip.appendChild(item);
+  });
+}
+function removeImg(i){pendingImages.splice(i,1);renderImgPreview();}
+
+// ── File selection ───────────────────────────────────────────────────────────
+function handleFileSelect(input){
+  const files=Array.from(input.files);
+  if(!files.length)return;
+  files.forEach(file=>{
+    const formData=new FormData();
+    formData.append('file',file);
+    fetch('/upload',{method:'POST',body:formData})
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.success){
+          pendingFiles.push({
+            name:data.filename,
+            type:data.type,
+            size:data.size,
+            extractedText:data.extracted_text,
+            hasContent:data.has_content,
+          });
+          renderFilePreview();
+          toast(`📎 ${data.filename} attached`,'ok');
+        }else{
+          toast(data.error||'Upload failed','warn');
+        }
+      })
+      .catch(()=>toast('Upload error','warn'));
+  });
+  input.value='';
+}
+
+function renderFilePreview(){
+  const strip=document.getElementById('filePreview');
+  strip.innerHTML='';
+  if(!pendingFiles.length){strip.classList.remove('show');document.getElementById('fileLabel').classList.remove('has-files');return;}
+  strip.classList.add('show');document.getElementById('fileLabel').classList.add('has-files');
+  pendingFiles.forEach((f,i)=>{
+    const item=document.createElement('div');item.className='prev-item';
+    const icon=f.type==='pdf'?'📕':f.type==='pptx'?'📊':f.type==='docx'?'📘':f.type==='py'?'🐍':'📄';
+    item.innerHTML=`<div class="file-chip"><span class="chip-icon">${icon}</span>${f.name} (${f.size})</div><button onclick="removeFile(${i})">✕</button>`;
+    strip.appendChild(item);
+  });
+}
+function removeFile(i){pendingFiles.splice(i,1);renderFilePreview();}
+
+// ── Markdown formatter (safe) ────────────────────────────────────────────────
+function fmt(raw){
+  let t=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  t=t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>');
+  t=t.replace(/\*(.*?)\*/g,'<i>$1</i>');
+  t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
+  return t;
+}
+
+// ── Language prefix ──────────────────────────────────────────────────────────
+function setLang(lang){ currentLang=lang; toast(lang==='auto'?'Auto language':'Language: '+lang); }
+function langPrefix(text){
+  if(currentLang==='auto'||!currentLang)return text;
+  return `[Please respond in ${currentLang}]\n\n${text}`;
+}
+
+// ── Persona-based bot class ──────────────────────────────────────────────────
+function getBotClass(){
+  if(inCover)return 'cv-bot';
+  if(inQuiz)return 'quiz-bot';
+  if(inPresentation)return 'prs-bot';
+  if(currentPersona==='tutor')return 'tutor-bot';
+  if(currentPersona==='coder')return 'coder-bot';
+  return 'bot';
+}
+
+function getBadgeClass(){
+  if(inCover)return 'cover';
+  if(inQuiz)return 'quiz-badge';
+  if(inPresentation)return 'presentation';
+  if(currentPersona==='tutor')return 'tutor-badge';
+  if(currentPersona==='coder')return 'coder-badge';
+  if(usePlanner)return 'planner';
+  return '';
+}
+
+function getBadgeText(){
+  if(inCover)return '📄 COVER PAGE';
+  if(inQuiz)return '🧠 QUIZ';
+  if(inPresentation)return '📊 PRESENTATION';
+  if(currentPersona==='tutor')return '🎓 TUTOR';
+  if(currentPersona==='coder')return '💻 CODER';
+  if(usePlanner)return '🧠 PLANNER';
+  return '';
+}
+
+// ── Cover mode ───────────────────────────────────────────────────────────────
+function startCoverMode(){
+  if(inCover){ cancelCover(); return; }
+  awaitingChoice=true;
+  appendBot('📄 **Cover Page Generator**\n\nHow would you like to proceed?\n\n💬 Type **chat** — I\'ll guide you step by step with questions\n📝 Type **form** — I\'ll show you a quick form to fill in');
+}
+
+async function cancelCover(){
+  inCover=false; awaitingChoice=false;
+  document.getElementById('cvBtn').classList.remove('on');
+  document.getElementById('cvBar').classList.remove('show');
+  inp.classList.remove('cv'); snd.classList.remove('cv');
+  updateHint();
+  await fetch('/cover-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel'})});
+  appendBot('❌ Cover page mode cancelled. Back to normal chat!');
+}
+
+function activateCoverBar(){
+  inCover=true;
+  document.getElementById('cvBtn').classList.add('on');
+  document.getElementById('cvBar').classList.add('show');
+  inp.classList.add('cv'); snd.classList.add('cv');
+  updateHint();
+}
+
+// ── Presentation mode ────────────────────────────────────────────────────────
+function openPresentationModal(){
+  document.getElementById('presModal').classList.add('show');
+  document.getElementById('presTopic').focus();
+}
+
+function closePresentationModal(){
+  document.getElementById('presModal').classList.remove('show');
+}
+
+async function generatePresentation(){
+  const topic=document.getElementById('presTopic').value.trim();
+  const details=document.getElementById('presDetails').value.trim();
+  if(!topic){document.getElementById('presMsg').textContent='⚠️ Please enter a topic.';return;}
+  document.getElementById('presGenBtn').disabled=true;
+  document.getElementById('presMsg').textContent='⏳ Generating presentation...';
+  inPresentation=true;
+  document.getElementById('prsBar').classList.add('show');
+  document.getElementById('prsBtn').classList.add('on');
+  closePresentationModal();
+
+  appendUserWithAttachments(`📊 Generate presentation about: ${topic}`,[],[]);
+
+  const typ=appendTyping();
+  try{
+    const res=await fetch('/presentation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,details})});
+    const data=await res.json(); typ.remove();
+    if(data.reply&&data.reply.includes('SUCCESS')){
+      const fname=data.filename||'Presentation.pptx';
+      appendDL(getBotClass(),`✅ Presentation generated! ${data.slides_count||''} slides created.`,fname,'📊 PRESENTATION','presentation');
+      triggerDL(fname); toast('📊 PPTX downloaded!','ok');
+    }else{
+      appendBot(data.reply||'Error generating presentation.');
+    }
+  }catch(e){typ.remove();appendBot('⚠️ Error generating presentation.');}
+  inPresentation=false;
+  document.getElementById('prsBar').classList.remove('show');
+  document.getElementById('prsBtn').classList.remove('on');
+  document.getElementById('presGenBtn').disabled=false;
+  document.getElementById('presMsg').textContent='';
+  document.getElementById('presTopic').value='';
+  document.getElementById('presDetails').value='';
+}
+
+function cancelPresentation(){
+  inPresentation=false;
+  document.getElementById('prsBar').classList.remove('show');
+  document.getElementById('prsBtn').classList.remove('on');
+  closePresentationModal();
+  toast('Presentation cancelled');
+}
+
+// ── Tutor mode bar ───────────────────────────────────────────────────────────
+function activateTutorBar(){
+  document.getElementById('tutorBar').classList.add('show');
+}
+function cancelTutorMode(){
+  document.getElementById('tutorBar').classList.remove('show');
+  setPersona('default');
+  document.getElementById('personaSel').value='default';
+}
+
+// ── Quiz Mode ────────────────────────────────────────────────────────────────
+let quizSource='topic', quizDifficulty='medium', quizFileContent=null;
+let activeQuizMsg=null; // Track current quiz message DOM element to remove on next question
+
+function openQuizModal(){
+  document.getElementById('quizModal').classList.add('show');
+  document.getElementById('quizTopic').focus();
+  // Default: file source if files are pending, topic otherwise
+  if(pendingFiles.length>0){
+    setQuizSource('file');
+  }
+}
+function closeQuizModal(){
+  document.getElementById('quizModal').classList.remove('show');
+}
+
+function setQuizSource(src){
+  quizSource=src;
+  document.getElementById('quizSrcTopic').classList.toggle('selected',src==='topic');
+  document.getElementById('quizSrcFile').classList.toggle('selected',src==='file');
+  document.getElementById('quizTopicField').style.display=src==='topic'?'block':'none';
+  document.getElementById('quizFileField').style.display=src==='file'?'block':'none';
+}
+
+function setQuizDiff(btn){
+  document.querySelectorAll('[data-diff]').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  quizDifficulty=btn.dataset.diff;
+}
+
+// Handle quiz file upload
+document.addEventListener('DOMContentLoaded',()=>{
+  const qfi=document.getElementById('quizFileInput');
+  if(qfi) qfi.addEventListener('change',async function(){
+    const file=this.files[0];
+    if(!file)return;
+    document.getElementById('quizFileStatus').textContent='⏳ Extracting content...';
+    const formData=new FormData();
+    formData.append('file',file);
+    try{
+      const res=await fetch('/upload',{method:'POST',body:formData});
+      const data=await res.json();
+      if(data.success && data.extracted_text){
+        quizFileContent=data.extracted_text;
+        document.getElementById('quizFileStatus').textContent=`✅ ${data.filename} (${data.size}) — content extracted`;
+      } else {
+        document.getElementById('quizFileStatus').textContent='⚠️ Could not extract text from this file. Try another.';
+        quizFileContent=null;
+      }
+    }catch(e){
+      document.getElementById('quizFileStatus').textContent='❌ Upload failed';
+      quizFileContent=null;
+    }
+    this.value='';
+  });
+});
+
+async function startQuiz(){
+  const topic=document.getElementById('quizTopic').value.trim();
+  const count=parseInt(document.getElementById('quizCountSlider').value);
+  
+  if(quizSource==='topic' && !topic){
+    document.getElementById('quizMsg').textContent='⚠️ Please enter a topic.';
+    return;
+  }
+  if(quizSource==='file' && !quizFileContent){
+    document.getElementById('quizMsg').textContent='⚠️ Please upload a file with extractable text.';
+    return;
+  }
+  
+  document.getElementById('quizStartBtn').disabled=true;
+  document.getElementById('quizMsg').textContent='⏳ Generating quiz questions...';
+  inQuiz=true;
+  document.getElementById('quizBar').classList.add('show');
+  document.getElementById('quizBtn').classList.add('on');
+  closeQuizModal();
+  
+  const srcLabel=quizSource==='topic'?topic:'Uploaded File';
+  appendUserWithAttachments(`🧠 Start quiz: ${srcLabel} (${quizDifficulty}, ${count} questions)`,[],[]);
+  
+  // v1.3: Show progress steps to the user
+  const progMsg=appendBotRaw('quiz-bot',
+    '<div class="quiz-card"><div style="text-align:center;padding:12px">'+
+    '<div style="font-size:1.1rem;margin-bottom:8px">🧠 Generating Quiz...</div>'+
+    '<div id="quizProgStep" style="font-size:.78rem;color:var(--muted)">Step 1/3: Trying NIM cloud (fastest)...</div>'+
+    '<div style="margin-top:10px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">'+
+    '<div id="quizProgBar" style="width:33%;height:100%;background:linear-gradient(90deg,#6d28d9,#8b5cf6);border-radius:2px;transition:width .5s"></div>'+
+    '</div></div></div>',
+    'quiz-badge','🧠 QUIZ');
+  
+  // v1.3: Animate progress while waiting
+  let progStep=1;
+  const progInterval=setInterval(()=>{
+    progStep++;
+    if(progStep>3)progStep=3;
+    const stepEl=document.getElementById('quizProgStep');
+    const barEl=document.getElementById('quizProgBar');
+    if(stepEl){
+      const steps=['Step 1/3: Trying NIM cloud (fastest)...','Step 2/3: Trying local model...','Step 3/3: Using template engine...'];
+      stepEl.textContent=steps[progStep-1];
+    }
+    if(barEl) barEl.style.width=(progStep*33)+'%';
+  },8000);
+  
+  try{
+    const body={source:quizSource, topic:topic, difficulty:quizDifficulty, count:count};
+    if(quizFileContent) body.file_content=quizFileContent;
+    const res=await fetch('/quiz/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json();
+    
+    // v1.3: Remove progress message
+    clearInterval(progInterval);
+    if(progMsg&&progMsg.parentNode) progMsg.remove();
+    
+    if(data.status==='error'){
+      appendBot(`⚠️ ${data.message}`);
+      exitQuizMode();
+      return;
+    }
+    
+    // Show first question
+    showQuizQuestion(data);
+    const viaInfo=data.source_type?` (via ${data.source_type})`:'';
+    toast(`🧠 Quiz started! ${data.total_questions} questions${viaInfo}`,'ok');
+  }catch(e){
+    clearInterval(progInterval);
+    if(progMsg&&progMsg.parentNode) progMsg.remove();
+    appendBot('⚠️ Error starting quiz. Please try again.');
+    exitQuizMode();
+  }
+  document.getElementById('quizStartBtn').disabled=false;
+  document.getElementById('quizMsg').textContent='';
+}
+
+async function showQuizQuestion(startData){
+  // Remove previous quiz message to prevent stacking
+  if(activeQuizMsg && activeQuizMsg.parentNode) activeQuizMsg.remove();
+
+  // Use the start data to fetch the first question
+  // (startData contains total_questions but not the question itself, so we still need /quiz/question)
+  const res=await fetch('/quiz/question');
+  const q=await res.json();
+  
+  if(q.status!=='question'){
+    // Quiz might be complete
+    const rRes=await fetch('/quiz/result');
+    const rData=await rRes.json();
+    showQuizResult(rData);
+    return;
+  }
+  
+  const pct=Math.round((q.current/q.total)*100);
+  const html=`
+    <div class="quiz-card">
+      <div class="quiz-progress"><div class="quiz-progress-fill" style="width:${pct}%"></div></div>
+      <div class="quiz-q-num">Question ${q.current} of ${q.total}${q.difficulty?' · '+q.difficulty:''}</div>
+      <div class="quiz-q-text">${escHtml(q.question)}</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt" onclick="selectQuizAnswer('A')"><span class="quiz-opt-letter">A</span>${escHtml(q.A)}</div>
+        <div class="quiz-opt" onclick="selectQuizAnswer('B')"><span class="quiz-opt-letter">B</span>${escHtml(q.B)}</div>
+        <div class="quiz-opt" onclick="selectQuizAnswer('C')"><span class="quiz-opt-letter">C</span>${escHtml(q.C)}</div>
+        <div class="quiz-opt" onclick="selectQuizAnswer('D')"><span class="quiz-opt-letter">D</span>${escHtml(q.D)}</div>
+      </div>
+    </div>
+  `;
+  
+  activeQuizMsg=_mkMsg('quiz-bot',html,'quiz-badge','🧠 QUIZ');
+}
+
+async function selectQuizAnswer(letter){
+  if(!activeQuizMsg) return;
+  // Prevent double-click — scope to current quiz message only
+  const opts=activeQuizMsg.querySelectorAll('.quiz-opt');
+  opts.forEach(o=>{o.style.pointerEvents='none';});
+  
+  // Highlight selected
+  const idx=letter.charCodeAt(0)-65;
+  if(opts[idx]) opts[idx].classList.add('selected');
+  
+  // Submit answer
+  const res=await fetch('/quiz/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:letter})});
+  const data=await res.json();
+  
+  if(data.status==='already_answered'){
+    // Show correct answer
+    const correctIdx=data.correct_answer.charCodeAt(0)-65;
+    if(opts[correctIdx]) opts[correctIdx].classList.add('correct');
+    return;
+  }
+  
+  // Show correct/wrong
+  const correctIdx=data.correct_answer.charCodeAt(0)-65;
+  if(data.correct){
+    if(opts[idx]) opts[idx].classList.add('correct');
+  } else {
+    if(opts[idx]) opts[idx].classList.add('wrong');
+    if(opts[correctIdx]) opts[correctIdx].classList.add('correct');
+  }
+  
+  // Show explanation — scope to current quiz card only
+  const card=activeQuizMsg.querySelector('.quiz-card');
+  if(card){
+    const expl=document.createElement('div');
+    expl.className='quiz-expl';
+    expl.innerHTML=`<b>${data.correct?'✅ Correct!':'❌ Wrong!'}</b> Correct answer: <b>${data.correct_answer}</b><br>${escHtml(data.explanation)}`;
+    card.appendChild(expl);
+    
+    // Next button or final result
+    const btn=document.createElement('button');
+    btn.className='quiz-next-btn';
+    if(data.is_last){
+      btn.textContent='📊 See Results';
+      btn.onclick=async()=>{
+        const rRes=await fetch('/quiz/next',{method:'POST'});
+        const rData=await rRes.json();
+        showQuizResult(rData);
+      };
+    } else {
+      btn.textContent='Next Question →';
+      btn.onclick=async()=>{
+        const nRes=await fetch('/quiz/next',{method:'POST'});
+        const nData=await nRes.json();
+        if(nData.status==='question') showQuizQuestion(nData);
+        else showQuizResult(nData);
+      };
+    }
+    card.appendChild(btn);
+  }
+}
+
+function showQuizResult(data){
+  // Remove previous quiz message to prevent stacking
+  if(activeQuizMsg && activeQuizMsg.parentNode) activeQuizMsg.remove();
+  activeQuizMsg=null;
+
+  if(data.status!=='completed') return;
+  const stars='⭐'.repeat(data.stars)+'☆'.repeat(5-data.stars);
+  
+  let reviewHtml='';
+  if(data.wrong_answers && data.wrong_answers.length>0){
+    reviewHtml=`<div style="margin-top:14px;text-align:left"><b style="color:var(--danger)">Wrong Answers:</b>`;
+    data.wrong_answers.forEach(w=>{
+      reviewHtml+=`<div class="quiz-review-item"><div class="qri-q">${escHtml(w.question)}</div><div class="qri-ans">Your answer: ${w.your_answer}</div><div class="qri-correct">Correct: ${w.correct_answer} — ${escHtml(w.explanation)}</div></div>`;
+    });
+    reviewHtml+='</div>';
+  }
+  
+  const html=`
+    <div class="quiz-card">
+      <div class="quiz-result">
+        <div style="font-size:.8rem;color:var(--muted)">Quiz Complete!</div>
+        <div class="quiz-score-big">${data.score}/${data.total}</div>
+        <div style="font-size:1.1rem;color:var(--accent2)">${data.percentage}%</div>
+        <div class="quiz-stars">${stars}</div>
+        <div class="quiz-detail">${data.source} · ${data.difficulty} · ${data.total} questions</div>
+        ${reviewHtml}
+        <div class="quiz-actions">
+          <button class="btn-primary" onclick="newQuiz()">🧠 New Quiz</button>
+          <button class="btn-secondary" onclick="exitQuizMode()">💬 Back to Chat</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  activeQuizMsg=_mkMsg('quiz-bot',html,'quiz-badge','🧠 QUIZ');
+  inQuiz=false;
+  document.getElementById('quizBar').classList.remove('show');
+  document.getElementById('quizBtn').classList.remove('on');
+  updateHint();
+}
+
+function newQuiz(){
+  openQuizModal();
+}
+
+function cancelQuiz(){
+  fetch('/quiz/cancel',{method:'POST'});
+  // Remove active quiz card if present
+  if(activeQuizMsg && activeQuizMsg.parentNode) activeQuizMsg.remove();
+  activeQuizMsg=null;
+  exitQuizMode();
+  appendBot('🧠 Quiz cancelled. Back to normal chat!');
+}
+
+function exitQuizMode(){
+  inQuiz=false;
+  // Remove ALL quiz bot messages from chat (not just activeQuizMsg)
+  document.querySelectorAll('.msg.quiz-bot').forEach(el=>el.remove());
+  activeQuizMsg=null;
+  document.getElementById('quizBar').classList.remove('show');
+  document.getElementById('quizBtn').classList.remove('on');
+  quizFileContent=null;
+  const qfs=document.getElementById('quizFileStatus');
+  if(qfs) qfs.textContent='';
+  updateHint();
+}
+
+function escHtml(str){
+  if(!str)return'';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Hint updater ─────────────────────────────────────────────────────────────
+function updateHint(){
+  const h=document.getElementById('hint');
+  if(inCover) h.textContent='Cover Page Mode — answer questions, type DONE when finished';
+  else if(inQuiz) h.textContent='Quiz Mode — answer questions to test your knowledge';
+  else if(inPresentation) h.textContent='Presentation Mode — generating your PPTX...';
+  else if(currentPersona==='tutor') h.textContent='Tutor Mode — share a topic, file, or YouTube link to learn';
+  else if(currentPersona==='coder') h.textContent='Coder Mode — ask me to code, debug, or explain programs';
+  else h.textContent='Personas · Quiz · Presentations · Cover Pages · File Upload · Voice I/O';
+}
+
+// ── Main send ─────────────────────────────────────────────────────────────────
+async function send(){
+  const text=inp.value.trim();
+  const hasImages=pendingImages.length>0;
+  const hasFiles=pendingFiles.length>0;
+  if(!text&&!hasImages&&!hasFiles)return;
+
+  // Show user message with attachments
+  appendUserWithAttachments(text,pendingImages.map(i=>i.thumb),pendingFiles.map(f=>({name:f.name,type:f.type})));
+  const imgs=[...pendingImages]; pendingImages=[]; renderImgPreview();
+  const files=[...pendingFiles]; pendingFiles=[]; renderFilePreview();
+  inp.value=''; inp.style.height='auto';
+  snd.disabled=true;
+
+  // Build file context from extracted text
+  let fileContext=null;
+  if(hasFiles){
+    const fileTexts=files.filter(f=>f.extractedText).map(f=>`=== ${f.name} ===\n${f.extractedText}`);
+    if(fileTexts.length) fileContext=fileTexts.join('\n\n');
+  }
+
+  // ── Cover choice ───────────────────────────────────────────────────────────
+  if(awaitingChoice){
+    const t=text.toLowerCase();
+    if(t.includes('form')||t==='f'){
+      awaitingChoice=false;
+      appendBot('Opening the cover page form! Fill it in and click Generate.');
+      setTimeout(showCoverForm,300);
+      snd.disabled=false;inp.focus();return;
+    } else if(t.includes('chat')||t==='c'){
+      awaitingChoice=false; activateCoverBar();
+      const typ=appendTyping();
+      const res=await fetch('/cover-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start'})});
+      const data=await res.json(); typ.remove(); appendCvBot(data.reply);
+      snd.disabled=false;inp.focus();return;
+    } else {
+      appendBot('Please type **chat** to answer questions or **form** to fill a form.');
+      snd.disabled=false;inp.focus();return;
+    }
+  }
+
+  // ── Cover chat mode ────────────────────────────────────────────────────────
+  if(inCover){
+    const typ=appendTyping();
+    try{
+      const res=await fetch('/cover-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'message',message:text})});
+      const data=await res.json(); typ.remove();
+      if(data.success){
+        inCover=false;
+        document.getElementById('cvBtn').classList.remove('on');
+        document.getElementById('cvBar').classList.remove('show');
+        inp.classList.remove('cv'); snd.classList.remove('cv');
+        updateHint();
+        const m=data.reply.match(/Download ready:\s*([\w\-\.]+\.zip)/i);
+        const fname=m?m[1]:'Aria_CoverPages.zip';
+        appendDL('cv-bot','✅ Cover pages generated as PDF!',fname,'📄 COVER PAGE','cover');
+        triggerDL(fname); toast('✅ PDFs downloaded!','ok');
+      } else {
+        appendCvBot(data.reply);
+        if(!data.active){ inCover=false; document.getElementById('cvBtn').classList.remove('on'); document.getElementById('cvBar').classList.remove('show'); inp.classList.remove('cv'); snd.classList.remove('cv'); updateHint(); }
+      }
+    }catch(e){appendBot('⚠️ Connection error.');}
+    snd.disabled=false;inp.focus();return;
+  }
+
+  // ── Normal chat — with optional images and files ──────────────────────────
+  const botCls=getBotClass();
+  const typ=appendTyping();
+  try{
+    const finalText=langPrefix(text||'Describe this image.');
+    const body={message:finalText,planner:usePlanner,persona:currentPersona};
+    if(imgs.length>0) body.images=imgs.map(i=>({base64:i.base64,mime:i.mime}));
+    if(fileContext) body.file_context=fileContext;
+
+    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json(); typ.remove();
+    if(data.reply&&data.reply.includes('SUCCESS: Cover pages generated')){
+      const m=data.reply.match(/Download ready:\s*([\w\-\.]+\.zip)/i);
+      appendDL(botCls,'✅ Cover pages generated!',m?m[1]:'Aria_CoverPages.zip','📄 COVER PAGE','cover');
+      triggerDL(m?m[1]:'Aria_CoverPages.zip'); toast('⬇ Downloading!','ok');
+    } else {
+      _mkMsg(botCls,fmt(data.reply),getBadgeClass(),getBadgeText());
+      if(useTTS)speak(data.reply);
+    }
+  }catch(e){typ.remove();appendBot('⚠️ Connection error. Run: python run.py --web');}
+  snd.disabled=false;inp.focus();
+}
+
+// ── DOM helpers ───────────────────────────────────────────────────────────────
+function appendUserWithAttachments(text,thumbs,files){
+  const w=document.createElement('div');w.className='msg user';
+  const av=document.createElement('div');av.className='av';av.textContent='You';
+  const inner=document.createElement('div');
+  const bbl=document.createElement('div');bbl.className='bbl';
+
+  // File attachments
+  if(files&&files.length){
+    files.forEach(f=>{
+      const icon=f.type==='pdf'?'📕':f.type==='pptx'?'📊':f.type==='docx'?'📘':'📄';
+      const chip=document.createElement('div');chip.className='file-attach';
+      chip.innerHTML=`<span class="file-icon">${icon}</span>${f.name}`;
+      bbl.appendChild(chip);
+    });
+  }
+
+  if(text)bbl.appendChild(document.createTextNode(text));
+  thumbs.forEach(src=>{
+    const img=document.createElement('img');img.className='thumb';img.src=src;
+    img.onclick=()=>openModal(src);bbl.appendChild(img);
+  });
+  const meta=document.createElement('div');meta.className='meta';
+  meta.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  inner.appendChild(bbl);inner.appendChild(meta);
+  w.appendChild(av);w.appendChild(inner);chatEl.appendChild(w);chatEl.scrollTop=chatEl.scrollHeight;
+}
+
+function _mkMsg(cls,htmlContent,badgeClass,badgeTxt){
+  const w=document.createElement('div');w.className=`msg ${cls}`;
+  const av=document.createElement('div');av.className='av';
+  const icons={'cv-bot':'📄','prs-bot':'📊','tutor-bot':'🎓','coder-bot':'💻','quiz-bot':'🧠'};
+  av.textContent=icons[cls]||'✦';
+  const inner=document.createElement('div');
+  if(badgeClass){const b=document.createElement('div');b.className=`badge ${badgeClass}`;b.textContent=badgeTxt;inner.appendChild(b);}
+  const bbl=document.createElement('div');bbl.className='bbl';bbl.innerHTML=htmlContent;
+  const meta=document.createElement('div');meta.className='meta';
+  meta.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  inner.appendChild(bbl);inner.appendChild(meta);
+  w.appendChild(av);w.appendChild(inner);chatEl.appendChild(w);chatEl.scrollTop=chatEl.scrollHeight;
+  return w;
+}
+
+function appendBot(raw,isPlanner=false){
+  return _mkMsg('bot',fmt(raw),isPlanner?'planner':'',isPlanner?'🧠 PLANNER':'');
+}
+// v1.3: Append raw HTML bot message (for quiz progress cards)
+function appendBotRaw(cls,htmlContent,badgeClass,badgeTxt){
+  return _mkMsg(cls,htmlContent,badgeClass,badgeTxt);
+}
+function appendCvBot(raw){
+  return _mkMsg('cv-bot',fmt(raw),'cover','📄 COVER PAGE');
+}
+function appendTyping(){
+  const cls=getBotClass();
+  const w=document.createElement('div');w.className=`msg ${cls} typing`;
+  w.innerHTML=`<div class="av">✦</div><div><div class="bbl"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  chatEl.appendChild(w);chatEl.scrollTop=chatEl.scrollHeight;return w;
+}
+function appendDL(cls,text,fname,badgeText,badgeCls){
+  const content=`<b>${text}</b><br><a class="dl-card" href="/download/${encodeURIComponent(fname)}" download="${fname}"><div class="dl-ico">📦</div><div class="dl-info"><div class="dl-title">${fname}</div><div class="dl-sub">Click to download</div></div><button class="dl-btn">⬇</button></a>`;
+  return _mkMsg(cls,content,badgeCls||'cover',badgeText||'📄 DOWNLOAD');
+}
+function triggerDL(f){const a=document.createElement('a');a.href=`/download/${encodeURIComponent(f)}`;a.download=f;document.body.appendChild(a);a.click();document.body.removeChild(a);}
+function openModal(src){document.getElementById('imgModalImg').src=src;document.getElementById('imgModal').classList.add('show');}
+
+// ── Cover form modal ─────────────────────────────────────────────────────────
+function showCoverForm(){
+  awaitingChoice=false;
+  const overlay=document.createElement('div');
+  overlay.id='formOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML=`
+  <div style="background:#1a1d27;border:1px solid #2e3250;border-radius:16px;padding:22px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 style="color:#14a085;font-size:1rem">📄 DIU Cover Page Form</h2>
+      <button onclick="document.getElementById('formOverlay').remove()" style="background:none;border:none;color:#8892b0;cursor:pointer;font-size:1.1rem">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px">
+      ${fi('fn','Full Name','e.g. Koushik Ahammed')}
+      ${fi('sid','Student ID','e.g. 241-15-259')}
+      ${fi('sec','Section','e.g. 66_O')}
+      ${fi('sem','Semester','e.g. 6TH or Spring 2025')}
+      ${fi('dept','Department','CSE','CSE',true)}
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:.7rem;color:#8892b0;font-weight:600;text-transform:uppercase">Doc Type</label>
+        <select id="dtype" style="background:#22263a;border:1px solid #2e3250;border-radius:7px;padding:7px 10px;color:#e2e8f0;font-size:.85rem;outline:none">
+          <option>Lab Report</option><option>Assignment</option>
+        </select>
+      </div>
+      ${fi('cc','Course Code','e.g. CSE314')}
+      ${fi('ct','Course Title','e.g. Compiler Design Lab','')}
+      ${fi('tn','Teacher Name','optional')}
+      ${fi('td','Designation','Lecturer','Lecturer')}
+      ${fi('tdp','Teacher Dept','CSE','CSE')}
+      ${fi('dt','Date (DD/MM/YYYY)','e.g. 15/04/2026')}
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:.7rem;color:#8892b0;font-weight:600;text-transform:uppercase;display:block;margin-bottom:5px">Experiments / Topics (one per line)</label>
+      <textarea id="exps" rows="5" placeholder="Introduction to Compiler Design&#10;Lexical Analysis&#10;Syntax Analysis"
+        style="background:#22263a;border:1px solid #2e3250;border-radius:7px;padding:8px 10px;color:#e2e8f0;font-size:.85rem;outline:none;width:100%;resize:vertical;font-family:inherit;line-height:1.6;min-height:100px"></textarea>
+    </div>
+    <button onclick="submitForm()" style="width:100%;padding:10px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer">📦 Generate PDFs</button>
+    <div id="formMsg" style="margin-top:8px;font-size:.78rem;color:#8892b0;text-align:center"></div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function fi(id,label,ph,val='',full=false){
+  return `<div style="display:flex;flex-direction:column;gap:3px${full?';grid-column:1/-1':''}">
+    <label style="font-size:.7rem;color:#8892b0;font-weight:600;text-transform:uppercase">${label}</label>
+    <input id="${id}" type="text" placeholder="${ph}" value="${val}"
+      style="background:#22263a;border:1px solid #2e3250;border-radius:7px;padding:7px 10px;color:#e2e8f0;font-size:.85rem;outline:none;width:100%"/>
+  </div>`;
+}
+
+async function submitForm(){
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const name=g('fn'),id=g('sid'),sec=g('sec'),cc=g('cc'),ct=g('ct');
+  if(!name||!id||!sec||!cc||!ct){document.getElementById('formMsg').textContent='⚠️ Fill Name, ID, Section, Course Code and Title.';return;}
+  const rawExps=g('exps').split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!rawExps.length){document.getElementById('formMsg').textContent='⚠️ Add at least one experiment/topic.';return;}
+  const dtype=g('dtype')||'Lab Report';
+  const isAsgn=dtype==='Assignment';
+  const experiments=rawExps.map((n,i)=>({name:n,no:isAsgn?'':String(i+1)}));
+  const payload={student_name:name,student_id:id,section:sec,department:g('dept')||'CSE',course_title:ct,course_code:cc,doc_type:dtype,experiments};
+  const sem=g('sem');if(sem)payload.semester=sem;
+  const tn=g('tn');if(tn)payload.teacher_name=tn;
+  const tds=g('td');if(tds)payload.teacher_designation=tds;
+  const tdp=g('tdp');if(tdp)payload.teacher_dept=tdp;
+  const dt=g('dt');if(dt)payload.date=dt;
+  document.getElementById('formMsg').textContent='⏳ Generating PDFs...';
+  try{
+    const res=await fetch('/cover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.reply&&data.reply.includes('SUCCESS')){
+      const m=data.reply.match(/Download ready:\s*([\w\-\.]+\.zip)/i);
+      const fname=m?m[1]:'Aria_CoverPages.zip';
+      document.getElementById('formOverlay').remove();
+      appendDL('cv-bot','✅ Cover pages generated as PDF!',fname);
+      triggerDL(fname); toast('✅ PDFs downloaded!','ok');
+    } else { document.getElementById('formMsg').textContent='Error: '+(data.reply||'Unknown'); }
+  }catch(e){document.getElementById('formMsg').textContent='Connection error.';}
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+async function setMode(m){await fetch('/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:m})});toast(`Mode: ${m}`);}
+function togglePlanner(){usePlanner=!usePlanner;document.getElementById('planBtn').classList.toggle('on',usePlanner);toast(usePlanner?'Planner ON':'Planner OFF');}
+function toggleTTS(){useTTS=!useTTS;document.getElementById('ttsBtn').classList.toggle('on',useTTS);toast(useTTS?'Voice ON':'Voice OFF');}
+function speak(t){if(!synth)return;synth.cancel();const u=new SpeechSynthesisUtterance(t.slice(0,500));u.rate=1.05;synth.speak(u);}
+async function clearMem(){await fetch('/clear',{method:'POST'});chatEl.innerHTML='';appendBot('Memory cleared! Fresh start.');toast('Cleared');}
+
+// ── Mic (FIXED) ──────────────────────────────────────────────────────────────
+function toggleMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    toast('Voice input not supported in this browser. Try Chrome or Edge.','warn');
+    return;
+  }
+  if(listening){
+    // Stop listening
+    if(recog) recog.stop();
+    return;
+  }
+  try{
+    recog=new SR();
+    recog.lang='en-US';
+    recog.interimResults=false;
+    recog.continuous=false;
+    recog.maxAlternatives=1;
+
+    recog.onstart=()=>{
+      listening=true;
+      mic.classList.add('on');
+      toast('🎤 Listening...');
+    };
+
+    recog.onresult=(event)=>{
+      let transcript='';
+      for(let i=event.resultIndex;i<event.results.length;i++){
+        if(event.results[i].isFinal){
+          transcript+=event.results[i][0].transcript;
+        }
+      }
+      if(transcript){
+        inp.value=transcript;
+        inp.dispatchEvent(new Event('input'));
+      }
+    };
+
+    recog.onend=()=>{
+      listening=false;
+      mic.classList.remove('on');
+    };
+
+    recog.onerror=(event)=>{
+      listening=false;
+      mic.classList.remove('on');
+      const errMsg={
+        'not-allowed':'Microphone access denied. Please allow microphone in browser settings.',
+        'no-speech':'No speech detected. Try again.',
+        'audio-capture':'No microphone found. Check your device.',
+        'network':'Network error during speech recognition.',
+        'aborted':'Voice input cancelled.',
+      };
+      toast(errMsg[event.error]||`Mic error: ${event.error}`,'warn');
+    };
+
+    recog.start();
+  }catch(e){
+    listening=false;
+    mic.classList.remove('on');
+    toast('Failed to start voice input: '+e.message,'warn');
+  }
+}
+
+function toast(msg,type=''){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='show'+(type?` ${type}`:'');
+  setTimeout(()=>{t.className=''},2600);
+}
+
+// ── Persona change handler for tutor bar ─────────────────────────────────────
+const origSetPersona=setPersona;
+setPersona=async function(p){
+  await origSetPersona(p);
+  if(p==='tutor') activateTutorBar();
+  else document.getElementById('tutorBar').classList.remove('show');
+  updateHint();
+};
+updateHint();
+
+// ── Sidebar / Conversation History ──────────────────────────────────────────
+const STORAGE_KEY='aria_conv_history';
+let conversations=[]; // [{id, title, time, messages:[{role,text}]}]
+let currentConvId=null;
+
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.classList.toggle('open');
+}
+
+function loadHistory(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw) conversations=JSON.parse(raw);
+  }catch(e){ conversations=[]; }
+  renderSidebar();
+}
+
+function saveHistory(){
+  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(conversations)); }catch(e){}
+}
+
+function renderSidebar(){
+  const list=document.getElementById('sidebarList');
+  list.innerHTML='';
+  if(!conversations.length){
+    list.innerHTML='<div style="text-align:center;padding:20px;font-size:.74rem;color:var(--muted)">No conversations yet</div>';
+    return;
+  }
+  conversations.slice().reverse().forEach(conv=>{
+    const item=document.createElement('div');
+    item.className='sidebar-item'+(conv.id===currentConvId?' active':'');
+    item.innerHTML=`<button class="si-del" onclick="event.stopPropagation();deleteConv('${conv.id}')">✕</button><div class="si-title">${escHtml(conv.title)}</div><div class="si-time">${conv.time}</div>`;
+    item.onclick=()=>loadConv(conv.id);
+    list.appendChild(item);
+  });
+}
+
+function startNewConv(firstMsg){
+  const id='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  const now=new Date();
+  const time=now.toLocaleDateString([],{month:'short',day:'numeric'})+' '+now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const title=firstMsg.length>40?firstMsg.slice(0,40)+'...':firstMsg;
+  const conv={id,title,time,messages:[]};
+  conversations.push(conv);
+  currentConvId=id;
+  saveHistory();
+  renderSidebar();
+  return conv;
+}
+
+function addMsgToConv(role,text){
+  if(!currentConvId){
+    // Auto-start a conversation
+    const conv=startNewConv(role==='user'?text:'Aria');
+    conv.messages.push({role,text});
+    saveHistory();
+    return;
+  }
+  const conv=conversations.find(c=>c.id===currentConvId);
+  if(conv){
+    conv.messages.push({role,text});
+    saveHistory();
+  }
+}
+
+function loadConv(id){
+  const conv=conversations.find(c=>c.id===id);
+  if(!conv) return;
+  currentConvId=id;
+  // Clear chat and rebuild
+  chatEl.innerHTML='';
+  conv.messages.forEach(m=>{
+    if(m.role==='user'){
+      const w=document.createElement('div');w.className='msg user';
+      const av=document.createElement('div');av.className='av';av.textContent='You';
+      const inner=document.createElement('div');
+      const bbl=document.createElement('div');bbl.className='bbl';
+      bbl.appendChild(document.createTextNode(m.text));
+      const meta=document.createElement('div');meta.className='meta';meta.textContent=conv.time;
+      inner.appendChild(bbl);inner.appendChild(meta);
+      w.appendChild(av);w.appendChild(inner);chatEl.appendChild(w);
+    } else {
+      _mkMsg('bot',fmt(m.text),'','');
+    }
+  });
+  chatEl.scrollTop=chatEl.scrollHeight;
+  // Also clear server memory and re-init
+  fetch('/clear',{method:'POST'});
+  renderSidebar();
+  toast('💬 Loaded: '+conv.title,'ok');
+}
+
+function deleteConv(id){
+  conversations=conversations.filter(c=>c.id!==id);
+  if(currentConvId===id) currentConvId=null;
+  saveHistory();
+  renderSidebar();
+  toast('Conversation deleted');
+}
+
+function clearAllHistory(){
+  if(!confirm('Delete all conversation history?')) return;
+  conversations=[];
+  currentConvId=null;
+  saveHistory();
+  renderSidebar();
+  toast('All history cleared');
+}
+
+function newConvFromSidebar(){
+  currentConvId=null;
+  chatEl.innerHTML='';
+  // Re-add welcome message
+  const w=document.createElement('div');w.className='msg bot';
+  const av=document.createElement('div');av.className='av';av.textContent='✦';
+  const inner=document.createElement('div');
+  const bbl=document.createElement('div');bbl.className='bbl';
+  bbl.innerHTML="Hello! I'm <b>Aria v1.4</b>, built by <b>Koushik Ahammed</b> 👋\n\nReady for a new conversation!";
+  const meta=document.createElement('div');meta.className='meta';meta.textContent='just now';
+  inner.appendChild(bbl);inner.appendChild(meta);
+  w.appendChild(av);w.appendChild(inner);chatEl.appendChild(w);
+  fetch('/clear',{method:'POST'});
+  renderSidebar();
+  toast('💬 New chat started','ok');
+}
+
+// Override clearMem to also reset currentConvId
+const origClearMem=clearMem;
+clearMem=async function(){
+  await fetch('/clear',{method:'POST'});
+  chatEl.innerHTML='';
+  appendBot('Memory cleared! Fresh start.');
+  currentConvId=null;
+  toast('Cleared');
+};
+
+// Init sidebar
+loadHistory();
+
+// Patch send() to save messages to history
+const origSend=send;
+send=async function(){
+  const text=inp.value.trim();
+  const hasImages=pendingImages.length>0;
+  const hasFiles=pendingFiles.length>0;
+  if(!text&&!hasImages&&!hasFiles) return;
+  // Save user message to history
+  if(text) addMsgToConv('user',text);
+  await origSend();
+};
+
+// Patch appendBot to also save bot messages to history
+const origAppendBot=appendBot;
+appendBot=function(raw,isPlanner=false){
+  const el=origAppendBot(raw,isPlanner);
+  addMsgToConv('bot',raw);
+  return el;
+};
+</script>
+</div><!-- end main-wrap -->
+</body>
+</html>

@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+uploads/
+memory.json
+*.pptx
+venv/
+.env.local
+.DS_Store
